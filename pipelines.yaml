@@ -1,0 +1,72 @@
+cflare:
+  workers: 1
+  delay: "5000"
+  source:
+    s3:
+      acknowledgments: true
+      delete_s3_objects_on_read: false
+      sqs:
+        queue_url: "https://sqs.us-west-2.amazonaws.com/156041409794/eli5-logl-prod-log-lake-cloudflare-notifications"
+      default_bucket_owner: "156041409794"
+      aws:
+        region: us-west-2
+      codec:
+        newline: {}
+      compression: gzip
+      workers: "1"
+  processor:
+    - parse_json:
+        source: "message"
+        overwrite_if_destination_exists: false
+        delete_source: true
+    - rename_keys:
+        entries:
+          - from_key: "Timestamp"
+            to_key: "Datetime"
+    - date:
+        match:
+          - key: "Datetime"
+            patterns: ["yyyy-MM-dd'T'HH:mm:ssX"]
+        destination: "@timestamp"
+    - add_entries:
+        entries:
+          - key: "records"
+            format: '{"ResourceRecordsJSON":${ResourceRecordsJSON}}'
+            overwrite_if_key_exists: true
+            add_when: "/ResourceRecordsJSON != null"
+    - parse_json:
+        source: "records"
+        overwrite_if_destination_exists: true
+        delete_source: true
+    - copy_values:
+        entries:
+          - from_key: "/s3/key"
+            to_key: "path_parts"
+    - split_string:
+        entries:
+          - source: "/path_parts"
+            delimiter: "/"
+    - add_entries:
+        entries:
+          - key: "/metadata/account"
+            value_expression: "/path_parts/1"
+            add_when: '/path_parts/0 == "accounts"'
+          - key: "/metadata/zone"
+            value_expression: "/path_parts/1"
+            add_when: '/path_parts/0 == "zones"'
+          - key: "/metadata/dataset"
+            value_expression: "/path_parts/2"
+    - delete_entries:
+        with_keys:
+          - "path_parts"
+  sink:
+    - stdout:
+        routes:
+          - dns
+    - file:
+        routes:
+          - _default
+        path: /dev/null
+  routes:
+    - dns: contains(/s3/key, "dns")
+    - _default: 'not contains(/s3/key, "dns")'
