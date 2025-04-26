@@ -19,10 +19,16 @@ cflare:
         source: "message"
         overwrite_if_destination_exists: false
         delete_source: true
-    - rename_keys:
+    - add_entries:
         entries:
-          - from_key: "Timestamp"
-            to_key: "Datetime"
+          - key: "Datetime"
+            value_expression: "/Timestamp"
+            overwrite_if_key_exists: true
+            add_when: "/Timestamp != null"
+          - key: "Datetime"
+            value_expression: "/EdgeStartTimestamp"
+            overwrite_if_key_exists: true
+            add_when: "/EdgeStartTimestamp != null"
     - date:
         match:
           - key: "Datetime"
@@ -62,11 +68,11 @@ cflare:
   sink:
     - stdout:
         routes:
-          - dns
+          - stdout
     - file:
         routes:
           - _default
         path: /dev/null
   routes:
-    - dns: contains(/s3/key, "dns")
-    - _default: 'not contains(/s3/key, "dns")'
+    - stdout: 'contains(/s3/key, "account")'
+    - _default: 'contains(/s3/key, "dns")'
