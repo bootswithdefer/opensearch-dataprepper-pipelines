@@ -1,6 +1,4 @@
 cflare:
-  workers: 1
-  delay: "5000"
   source:
     s3:
       acknowledgments: true
@@ -87,6 +85,15 @@ cflare:
         routes:
           - _default
         path: /dev/null
+    - opensearch:
+        hosts:
+          - "https://vpc-eli5-logl-prod-u7beymlxxbg5adxhnrq77gr6vy.us-west-2.es.amazonaws.com"
+        index: "test_cloudflare"
+        routes:
+          - opensearch
+        aws:
+          serverless: false
+          region: "us-west-2"
   routes:
-    - stdout: '/metadata/product == "aqmp"'
+    - opensearch: '/metadata/product == "aqmp"'
     - _default: '/metadata/product == "cflare"'
