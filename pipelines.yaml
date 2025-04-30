@@ -88,12 +88,11 @@ cflare:
     - opensearch:
         hosts:
           - "https://vpc-eli5-logl-prod-u7beymlxxbg5adxhnrq77gr6vy.us-west-2.es.amazonaws.com"
-        index: "test_cloudflare"
+        index: "test_cloudflare_${/metadata/product}"
         routes:
           - opensearch
         aws:
           serverless: false
           region: "us-west-2"
   routes:
-    - opensearch: '/metadata/product == "aqmp"'
-    - _default: '/metadata/product == "cflare"'
+    - opensearch: "/metadata/product != null"
