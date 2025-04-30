@@ -6,14 +6,18 @@ cflare:
       acknowledgments: true
       delete_s3_objects_on_read: false
       sqs:
-        queue_url: "https://sqs.us-west-2.amazonaws.com/156041409794/eli5-logl-prod-log-lake-cloudflare-notifications"
+        queue_url: "https://sqs.us-west-2.amazonaws.com/156041409794/eli5-logl-prod-log-lake-cloudflare-cribl"
+        maximum_messages: "10"
+        visibility_timeout: 60s
+        visibility_duplication_protection: true
+      notification_type: sqs
+      notification_source: s3
       default_bucket_owner: "156041409794"
       aws:
         region: us-west-2
       codec:
         newline: {}
       compression: gzip
-      workers: "1"
   processor:
     - parse_json:
         source: "message"
@@ -60,6 +64,16 @@ cflare:
             add_when: '/path_parts/0 == "zones"'
           - key: "/metadata/dataset"
             value_expression: "/path_parts/2"
+          - key: "/metadata/product"
+            value: "cflare"
+          - key: "/metadata/product"
+            value: "aqmp"
+            add_when: '/metadata/zone== "asuedge.acquiaedge.net"'
+            overwrite_if_key_exists: true
+          - key: "/metadata/product"
+            value: "aqmp"
+            add_when: '/metadata/account == "31a24f9fdb8e5d5aecba1431c42bf10d"'
+            overwrite_if_key_exists: true
     - delete_entries:
         with_keys:
           - "message"
@@ -74,5 +88,5 @@ cflare:
           - _default
         path: /dev/null
   routes:
-    - stdout: 'contains(/s3/key, "account")'
-    - _default: 'contains(/s3/key, "dns")'
+    - stdout: '/metadata/product == "aqmp"'
+    - _default: '/metadata/product == "cflare"'
