@@ -88,7 +88,7 @@ cflare:
     - opensearch:
         hosts:
           - "https://vpc-eli5-logl-prod-u7beymlxxbg5adxhnrq77gr6vy.us-west-2.es.amazonaws.com"
-        index: "test_cloudflare_${/metadata/product}"
+        index: "test_cloudflare_${/metadata/dataset}_%{yyyyMMdd}"
         routes:
           - opensearch
         aws:
