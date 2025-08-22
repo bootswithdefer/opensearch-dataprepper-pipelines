@@ -1,3 +1,4 @@
+---
 cflare:
   source:
     s3:
@@ -30,6 +31,22 @@ cflare:
             value_expression: "/EdgeStartTimestamp"
             overwrite_if_key_exists: true
             add_when: "/EdgeStartTimestamp != null"
+          - key: "Datetime"
+            value_expression: "/When"
+            overwrite_if_key_exists: true
+            add_when: "/When != null"
+          - key: "Datetime"
+            value_expression: "/CreatedAt"
+            overwrite_if_key_exists: true
+            add_when: "/CreatedAt != null"
+          - key: "Datetime"
+            value_expression: "/DetectedTimestamp"
+            overwrite_if_key_exists: true
+            add_when: "/DetectedTimestamp != null"
+          - key: "Datetime"
+            value_expression: "/SessionStartTime"
+            overwrite_if_key_exists: true
+            add_when: "/SessionStartTime != null"
     - date:
         match:
           - key: "Datetime"
@@ -54,24 +71,48 @@ cflare:
             delimiter: "/"
     - add_entries:
         entries:
-          - key: "/metadata/account"
-            value_expression: "/path_parts/1"
-            add_when: '/path_parts/0 == "accounts"'
-          - key: "/metadata/zone"
-            value_expression: "/path_parts/1"
-            add_when: '/path_parts/0 == "zones"'
-          - key: "/metadata/dataset"
+          - key: "/Metadata/account"
+            value_expression: "/path_parts/3"
+            add_when: '/path_parts/1 == "cloudflare-account"'
+          - key: "/Metadata/zone"
+            value_expression: "/path_parts/3"
+            add_when: '/path_parts/1 == "cloudflare-zone"'
+          - key: "/Metadata/dataset"
             value_expression: "/path_parts/2"
-          - key: "/metadata/product"
+          - key: "/Metadata/product_key"
             value: "cflare"
-          - key: "/metadata/product"
+          - key: "/Metadata/product_key"
             value: "aqmp"
-            add_when: '/metadata/zone== "asuedge.acquiaedge.net"'
+            add_when: '/Metadata/zone == "asuedge.acquiaedge.net"'
             overwrite_if_key_exists: true
-          - key: "/metadata/product"
+          - key: "/Metadata/product_key"
             value: "aqmp"
-            add_when: '/metadata/account == "31a24f9fdb8e5d5aecba1431c42bf10d"'
+            add_when: '/Metadata/account == "31a24f9fdb8e5d5aecba1431c42bf10d"'
             overwrite_if_key_exists: true
+    - translate:
+        mappings:
+          - source: /Metadata/account
+            targets:
+              - target: /Metadata/account_name
+                default: "Unknown"
+                map:
+                  "187a7e6440e48c052d13b6d3ff1e6b74": "Arizona State University"
+                  "31a24f9fdb8e5d5aecba1431c42bf10d": "Arizona State University (Acquia)"
+                  "4ed65a654fbf02ec921c70c80425f416": "ASU DNS Filtering Camp Level Up"
+                  "ca9d384a33332b44b186a22878ea8f67": "ASU DNS Filtering Herberger Young Scholars Academy"
+                  "af4f4eacf3aa99e87f74226f0e6981cb": "ASU DNS Filtering Law"
+                  "728235f1bad4ef65026330bfa138f0c1": "ASU DNS Filtering Libraries"
+                  "bc66b690a6f5d2d5292435c536988090": "ASU DNS Filtering Main"
+                  "547542928981724e6277cfd9569a52f9": "ASU DNS Filtering Prep"
+                  "1159874d470f3df381c0aeedf1937d79": "ASU Email"
+                  "3b8099f23f4cdfc466b5836ec3695aa0": "ASU Enterprise Web"
+                  "dfa90e1f48c658df1310e0a5de04a989": "ASU Guest WiFi"
+                  "5d786a1e9ff1f5d6d63bdbc50bc2b86c": "ASU Herberger Institute"
+                  "0e9bbcd9c958c766818c891d3cd90184": "ASU Knowledge Enterprise"
+                  "bb2d87f7f9c323af699887038955f072": "ASU Network Testing"
+                  "9d6e7693a997d00a05f9e98a2c5579aa": "ASU Trusted Learner Network"
+                  "6931c79eb54b9ae33919e2935e708d84": "FIDM"
+                  "aa926588c380a73831ab7b6b56ee85ff": "Symbiota Support Hub"
     - delete_entries:
         with_keys:
           - "message"
@@ -88,11 +129,13 @@ cflare:
     - opensearch:
         hosts:
           - "https://vpc-eli5-logl-prod-u7beymlxxbg5adxhnrq77gr6vy.us-west-2.es.amazonaws.com"
-        index: "test_cloudflare_${/metadata/dataset}_%{yyyyMMdd}"
+        index: "test_cloudflare_${/Metadata/dataset}_%{yyyyMMdd}"
+        action: "create"
+        bulk_size: 25 # 100 MiB is the maximum for or2 instances.
         routes:
           - opensearch
         aws:
           serverless: false
           region: "us-west-2"
   routes:
-    - opensearch: "/metadata/product != null"
+    - stdout: "/Metadata/account_name != null"
